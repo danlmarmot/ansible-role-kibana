@@ -1,0 +1,61 @@
+---
+# Install from cached files contained in the shared folder
+- name: Set installer filename
+  set_fact:
+    kibana_installer_filename: "kibana_{ kibana_pkg_version }}_amd64.deb"
+
+- name: Set package cache directory
+  set_fact:
+    pkg_cache_dir: /home/vagrant/shared/installers/{{ role_name }}-role/{{ kibana_pkg_version }}
+
+- name: Ensure directories exist
+  file:
+    path: "{{ item }}"
+    state: directory
+  with_items:
+    - "{{ pkg_cache_dir }}"
+    - "{{ local_apt_repo }}"
+
+- name: Set the package name and version to be installed
+  set_fact:
+    pkg_name: "{{ kibana_pkg_name }}"
+    pkg_version: "{{ kibana_pkg_version }}"
+    pkg_dep_list_filename: "{{ kibana_pkg_name }}-{{ kibana_pkg_version }}-deb-dependencies.txt"
+
+- name: Set paths to dependency lists
+  set_fact:
+    pkg_dep_list: "{{ pkg_cache_dir }}/{{ pkg_dep_list_filename }}"
+
+# This step is just so we can reuse the download-pkg-list.sh.j2 template if there are multiple packages to install
+- name: Create the script to  list of .deb files to download
+  template:
+    src: download-pkg-list.sh.j2
+    dest: "{{ pkg_cache_dir }}/download-pkg-list-{{ kibana_pkg_name }}-{{ kibana_pkg_version }}.sh"
+    mode: 0755
+
+- name: Run the script, creating a list of package dependencies
+  shell: "{{ pkg_cache_dir }}/download-pkg-list-{{ kibana_pkg_name }}-{{ kibana_pkg_version }}.sh"
+
+- name: Download dependencies
+  command: "wget --input {{ pkg_dep_list }} --no-clobber"
+  args:
+    chdir: "{{ pkg_cache_dir }}"
+
+# Basically just doing this: https://askubuntu.com/questions/170348/how-to-make-my-own-local-repository
+- name: Copy files into local deb repo
+  shell: "cp {{ pkg_cache_dir }}/*.deb {{ local_apt_repo }}"
+
+- name: Ensure apt sources list has local repo as first line
+  lineinfile:
+    dest: /etc/apt/sources.list
+    line: "deb file:{{ local_apt_repo }} ./"
+    insertbefore: BOF
+
+- name: Create package list in deb repo
+  shell: sudo bash -c 'dpkg-scanpackages . | gzip > ./Packages.gz'
+  args:
+    chdir: "{{ local_apt_repo }}"
+
+- name: Update apt cache
+  apt:
+    update_cache: yes

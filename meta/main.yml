@@ -1,0 +1,4 @@
+---
+dependencies:
+  - { role: oracle_java }
+  - { role: elasticsearch }

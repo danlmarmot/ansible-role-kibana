@@ -1,0 +1,15 @@
+---
+role_name: kibana
+
+kibana_pkg_name: kibana
+kibana_minor_version: 4.4
+kibana_pkg_version: 4.4.2
+
+local_apt_repo: /usr/local/deb-repo
+
+kibana_cfg:
+  server:
+    host: localhost
+    port: 5601
+  elasticsearch:
+    url: http://localhost:9200

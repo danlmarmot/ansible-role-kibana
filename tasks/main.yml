@@ -1,0 +1,73 @@
+---
+# Installs kibana
+
+- name: Starting kibana role
+  debug:
+    msg: "{{ lookup('pipe','date') }}"
+
+# Look for the shared_folder variable for Vagrant-based installs
+- name: Look for Vagrant shared folder
+  stat: path=/home/vagrant/shared/installers/
+  register: shared_folder
+
+- name: Default to installing kibana
+  set_fact:
+    kibana_install_flag: true
+
+- name: Get current kibana version
+  shell: python -c "import json; print(json.load(open('/opt/kibana/package.json'))['version'])"
+  register: kibana_version_cmd
+  ignore_errors: yes
+  changed_when: false
+
+- name: Set kibana_install_flag to false if kibana version is already installed
+  set_fact:
+    kibana_install_flag: false
+  when: kibana_version_cmd.rc == 0 and (kibana_pkg_version == kibana_version_cmd.stdout)
+
+- name: Look for existing kibana Ubuntu repository
+  stat: path="/etc/apt/sources.list.d/packages_elastic_co_kibana_2_2_debian.list"
+  register: kibana_repo_file
+  when: kibana_install_flag == true
+
+- name: Add kibana repository, as needed
+  apt_repository:
+    repo: "deb http://packages.elastic.co/kibana/{{ kibana_minor_version }}/debian stable main"
+  when: kibana_install_flag == true and kibana_repo_file.stat.exists == false
+
+- name: Update apt-cache if older than two hours
+  apt:
+    update_cache: yes
+    cache_valid_time: 7200
+  when: kibana_install_flag == true
+
+# For Vagrant-managed environments
+- include: install-from-shared-dir.yml
+  when: shared_folder.stat.exists and kibana_install_flag == true and "vagrant_managed" in group_names
+
+- name: Install kibana
+  apt:
+    pkg: "{{ item }}"
+    state: installed
+    force: yes
+  with_items:
+    - kibana
+
+- name: Set kibana to start at boot
+  service:
+    name: kibana
+    enabled: yes
+
+- name: Update kibana.yml config file
+  template:
+    src: kibana.yml.j2
+    dest: /opt/kibana/config/kibana.yml
+    owner: root
+    group: root
+    mode: 0665
+  notify:
+    - Restart kibana handler
+
+- name: Finished with kibana role
+  debug:
+    msg: "{{ lookup('pipe','date') }}"

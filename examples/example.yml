@@ -1,0 +1,8 @@
+- name: "Install Kibana"
+  hosts: all
+  user: "{{ site_ssh_user }}"
+  sudo: yes
+  gather_facts: true
+
+  roles:
+    - ansible-role-kibana

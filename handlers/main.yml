@@ -1,0 +1,5 @@
+---
+- name: Restart kibana handler
+  service:
+    name: kibana
+    state: restarted

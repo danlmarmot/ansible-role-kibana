@@ -1,0 +1,1 @@
+apt-get --print-uris --yes install {{ pkg_name }} | grep ^\' | cut -d\' -f2 > /home/vagrant/shared/installers/{{ role_name }}-role/{{ pkg_version}}/{{ pkg_name }}-{{ pkg_version }}-deb-dependencies.txt

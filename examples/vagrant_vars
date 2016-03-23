@@ -1,0 +1,11 @@
+---
+# Overrides for Vagrant
+
+# Kibana config for Vagrant
+# Allows access from any host
+kibana_cfg:
+  server:
+    host: 0.0.0.0
+    port: 5601
+  elasticsearch:
+    url: http://localhost:9200
